@@ -1,4 +1,4 @@
-package com.mproject.unique;
+package com.railRoute.unique;
 
 import android.content.Context;
 import android.util.Log;
@@ -8,7 +8,7 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 
-import com.mproject.railroute.R;
+import com.texplore.railroute.R;
 
 import java.util.ArrayList;
 
@@ -49,7 +49,14 @@ public class ListAdapter extends BaseAdapter {
 		final Product p = getProduct(position);
 
 		final TextView Tname = (TextView) view.findViewById(R.id.train_name);
-		Tname.setText(p.name);
+		if(p.name == null)
+		{
+			Tname.setText("");
+		}else
+		{
+			Tname.setText(p.name);
+		}
+
 		Tname.setTag(position);
 		Tname.setOnClickListener(new View.OnClickListener() {
 			@Override
@@ -58,12 +65,18 @@ public class ListAdapter extends BaseAdapter {
 				Log.e("dfsfdsfd", s);
 
 
-
 			}
 		});
 
-		((TextView) view.findViewById(R.id.startingStation)).setText(p.stationStart);
-		((TextView) view.findViewById(R.id.endingStation)).setText(p.stationEnd);
+		if(p.name == null)
+		{
+			((TextView) view.findViewById(R.id.startingStation)).setText("");
+		}else
+		{
+			((TextView) view.findViewById(R.id.startingStation)).setText(p.stationStart);
+		}
+
+//		((TextView) view.findViewById(R.id.train_name)).setText(p.name);
 
 
 		return view;
@@ -73,4 +86,6 @@ public class ListAdapter extends BaseAdapter {
 	{
 		return ((Product) getItem(position));
 	}
+
+
 }
