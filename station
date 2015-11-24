@@ -1,0 +1,55 @@
+package com.railRoute.unique;
+
+
+
+    import java.io.*;
+    import java.net.URL;
+    import java.net.URLConnection;
+    import java.util.ArrayList;
+    import java.util.regex.Matcher;
+    import java.util.regex.Pattern;
+
+    public class TrainsBetweenStation
+    {
+        public static ArrayList<String[]> getTrainBetweenStations( String stn_from,String stn_to ){
+
+//      String stn_from="UMB";
+//      String stn_to="NDLS";
+            // String to be scanned to find the pattern.
+            ArrayList<String[]> traindata = new ArrayList<>();
+            try{
+                URL url = new URL("http://erail.in/rail/getTrains.aspx?Station_From="+stn_from+"&Station_To="+stn_to+"&DataSource=0&Language=0");
+                URLConnection  urlcon= url.openConnection();
+                InputStream stream=urlcon.getInputStream();
+                BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
+                String result="";
+                String i;
+                while((i=buf.readLine())!=null){
+                    result+=i;
+
+                }
+                // Create a Pattern object
+                Pattern Pat_train_items = Pattern.compile("\\^\\d+\\~[A-Za-z0-9 ]+");
+                Pattern Pat_train_name = Pattern.compile("~[A-Za-z0-9 ]+");
+                Pattern Pat_train_num = Pattern.compile("\\^\\d+");
+
+                }
+
+
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+            return traindata;
+        }
+
+
+        public static void main(String[] args){
+            ArrayList<String[]> traindata = getTrainBetweenStations("CDG","UMB");
+            for(int j=0;j<traindata.size();j++){
+                System.out.println(traindata.get(j)[0]+","+traindata.get(j)[1]);
+            }
+        }
+    }
+
+
+
