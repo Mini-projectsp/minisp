@@ -48,10 +48,6 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
-/**
- * Created by boss on 16-11-2015.
- */
 public class DrawRoute extends FragmentActivity {
     GoogleMap map;
     ArrayList markerPoints;
