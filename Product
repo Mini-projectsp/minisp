@@ -1,13 +1,13 @@
-package com.mproject.unique;
+package com.railRoute.unique;
 
 public class Product {
-	String name,stationStart,stationEnd;
+	String name,stationStart;
 
 
-	  public Product(String _describe, String _stationStart, String _stationEnd) {
+	  public Product(String _describe, String _stationStart) {
 		  name = _describe;
 		  stationStart = _stationStart;
-		  stationEnd = _stationEnd;
+
 
 	  }
 	}
