@@ -1,15 +1,19 @@
-package com.mproject.railroute;
+package com.railRoute.railroute;
 
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.graphics.Color;
+import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -20,16 +24,18 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.PolylineOptions;
-import com.mproject.unique.AsyncClass;
-import com.mproject.unique.DirectionsJSONParser;
-import com.mproject.unique.JSONParser;
-import com.mproject.unique.ListAdapter;
-import com.mproject.unique.Product;
-import com.mproject.unique.ServiceHandler;
+import com.railRoute.unique.Product;
+import com.texplore.railroute.R;
+import com.railRoute.unique.ListAdapter;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -38,8 +44,9 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 /**
@@ -53,18 +60,25 @@ public class DrawRoute extends FragmentActivity {
     static ArrayList<Product> products = new ArrayList<Product>();
     ListAdapter boxAdapter;
     ListView listview_trains;
-    AsyncClass async;
     ProgressDialog pdialog;
-    String tempp,url;
-    JSONParser jsonParser;
+    private String url,current_lat,current_lng,s_end_station_code="",s_start_station_code="",getCodeOfTrainUrl;
+    LinearLayout heading;
+    double min_distance = 1000000;
+    ArrayList<String> altrain = new ArrayList<>();
+    ArrayList<String> alnum = new ArrayList<>();
+    private String API_KEY = "kzgcg4679";
+    private String url_trains_name =  "http://api.railwayapi.com/between/source/klk/dest/anvt/apikey/"+API_KEY;;
+    Context context;
+    ScrollView scroll;
+    LinearLayout ll;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getID();
-        fillDataInListViewTrain();
-        listview_trains.setAdapter(boxAdapter);
+//        listviewClick();
+
 
 // Initializing
         markerPoints = new ArrayList();
@@ -81,33 +95,19 @@ public class DrawRoute extends FragmentActivity {
             map.setMyLocationEnabled(true);
             options.compassEnabled(true)
                     .scrollGesturesEnabled(true)
-                    .rotateGesturesEnabled(true);
-
-
-
+                    .rotateGesturesEnabled(true)
+                    .zoomControlsEnabled(true);
 
 // Setting onclick event listener for the map
             map.setOnMapClickListener(new OnMapClickListener() {
 
                 @Override
                 public void onMapClick(LatLng point) {
-                    Log.e("latlondddddd",point+"");
-
-                    String a = String.valueOf(point);
-                   String temp[] =  a.split(",");
-
-                        String lat = temp[0];
-                        String long1 = temp[1];
-                        Log.e("dfsadfdsffdasf","lat"+lat+"  "+"long"+long1);
-                    url = "http://maps.googleapis.com/maps/api/geocode/json?latlng="+lat+","+long1+"&sensor=true";
-                    url = "http://maps.googleapis.com/maps/api/geocode/json?latlng=30.76666,76.335421&sensor=true";
-
+                    Log.e("latlondddddd",point.latitude+"");
+                     current_lat = point.latitude+"";
+                     current_lng = point.longitude+"";
+                    url = "http://maps.googleapis.com/maps/api/geocode/json?latlng="+point.latitude+","+point.longitude+"&sensor=true";
                     new GetStationName().execute();
-
-
-
-
-
 
 // Already two locations
                     if (markerPoints.size() > 1) {
@@ -140,14 +140,23 @@ public class DrawRoute extends FragmentActivity {
                     if (markerPoints.size() >= 2) {
                         LatLng origin = (LatLng) markerPoints.get(0);
                         LatLng dest = (LatLng) markerPoints.get(1);
+//                        LatLng dest2 =new LatLng(30.8330,76.9330);
 
 // Getting URL to the Google Directions API
                         String url = getDirectionsUrl(origin, dest);
+//                        String url1 =getDirectionsUrl(dest,dest2);
 
                         DownloadTask downloadTask = new DownloadTask();
 
 // Start downloading json data from Google Directions API
                         downloadTask.execute(url);
+//                        downloadTask.getStatus()!= AsyncTask.Status.FINISHED);
+//
+////                        {
+//                            Log.e("check status","gfgh");
+//                            downloadTask.execute(url1);
+////                        }
+//
                     }
 
                 }
@@ -161,8 +170,11 @@ public class DrawRoute extends FragmentActivity {
     {
         start               = (TextView) findViewById(R.id.startpoint);
         end                 = (TextView) findViewById(R.id.destination);
-        listview_trains     = (ListView) findViewById(R.id.listview_trains);
+//        listview_trains     = (ListView) findViewById(R.id.listview_trains);
+        heading             = (LinearLayout) findViewById(R.id.heading);
         boxAdapter          = new ListAdapter(this, products);
+        scroll              = (ScrollView)findViewById(R.id.scrollview);
+        ll                  = (LinearLayout)findViewById(R.id.linearLay);
     }
 
 
@@ -170,12 +182,30 @@ public class DrawRoute extends FragmentActivity {
 
     public void fillDataInListViewTrain()
     {
-        for(int i = 0; i<10 ; i++)
-        {
-            products.add(new Product("KalKa Express"+i,"Kalka","New Delhi"));
-        }
+        heading.setVisibility(View.VISIBLE);
+//        for(int i = 0; i<alnum.size() ; i++)
+//        {
+//            products.add(new Product(altrain.get(i),alnum.get(i)));
+//        }
+        setIconsLipsm();
 
     }
+
+
+//    on click of train name from list
+//    public void listviewClick()
+//    {
+//        listview_trains.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+//            @Override
+//            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+//            Intent i = new Intent(DrawRoute.this,StationListClass.class);
+//                i.putExtra("name",alnum.get(position));
+//                i.putExtra("start_code",s_start_station_code);
+//                i.putExtra("end_code",s_end_station_code);
+//                startActivity(i);
+//            }
+//        });
+//    }
 
 
     private String getDirectionsUrl(LatLng origin,LatLng dest){
@@ -202,7 +232,7 @@ public class DrawRoute extends FragmentActivity {
     }
 
     /** A method to download json data from url */
-    private String downloadUrl(String strUrl) throws IOException{
+    public String downloadUrl(String strUrl) throws IOException{
         String data = "";
         InputStream iStream = null;
         HttpURLConnection urlConnection = null;
@@ -254,7 +284,7 @@ public class DrawRoute extends FragmentActivity {
 // Fetching the data from web service
                 data = downloadUrl(url[0]);
             }catch(Exception e){
-                Log.d("Background Task",e.toString());
+                Log.d("Background Task", e.toString());
             }
             return data;
         }
@@ -265,7 +295,7 @@ public class DrawRoute extends FragmentActivity {
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
 
-            ParserTask parserTask = new ParserTask();
+            ParserTask parserTask = new ParserTask(context,result,map);
 
 // Invokes the thread for parsing the JSON data
             parserTask.execute(result);
@@ -274,71 +304,7 @@ public class DrawRoute extends FragmentActivity {
     }
 
     /** A class to parse the Google Places in JSON format */
-    private class ParserTask extends AsyncTask<String, Integer, List<List<HashMap<String,String>>> >{
 
-        // Parsing the data in non-ui thread
-        @Override
-        protected List<List<HashMap<String, String>>> doInBackground(String... jsonData) {
-
-            JSONObject jObject;
-            List<List<HashMap<String, String>>> routes = null;
-
-            try{
-                jObject = new JSONObject(jsonData[0]);
-                DirectionsJSONParser parser = new DirectionsJSONParser();
-
-// Starts parsing data
-                routes = parser.parse(jObject);
-            }catch(Exception e){
-                e.printStackTrace();
-            }
-            return routes;
-        }
-
-        // Executes in UI thread, after the parsing process
-        @Override
-        protected void onPostExecute(List<List<HashMap<String, String>>> result) {
-            ArrayList points = null;
-            PolylineOptions lineOptions = null;
-            MarkerOptions markerOptions = new MarkerOptions();
-
-// Traversing through all the routes
-            for(int i=0;i<result.size();i++){
-                points = new ArrayList();
-                lineOptions = new PolylineOptions();
-
-// Fetching i-th route
-                List<HashMap<String, String>> path = result.get(i);
-
-// Fetching all the points in i-th route
-                for(int j=0;j <path.size();j++){
-                    HashMap<String,String> point = path.get(j);
-
-                    double lat = Double.parseDouble(point.get("lat"));
-                    double lng = Double.parseDouble(point.get("lng"));
-                    LatLng position = new LatLng(lat, lng);
-
-                    points.add(position);
-                }
-
-// Adding all the points in the route to LineOptions
-                lineOptions.addAll(points);
-                lineOptions.width(2);
-                lineOptions.color(Color.RED);
-
-            }
-
-// Drawing polyline in the Google Map for the i-th route
-            if(lineOptions !=null) {
-                map.addPolyline(lineOptions);
-            }
-            else
-            {
-                Toast.makeText(getApplicationContext(),"Please Tap At Valid Postion", Toast.LENGTH_LONG).show();
-
-            }
-        }
-    }
 
     private class ReverseGeocodingTask extends AsyncTask<LatLng, Void, String>{
         Context mContext;
@@ -389,7 +355,8 @@ public class DrawRoute extends FragmentActivity {
         }
     }
 
-   private class GetStationName extends AsyncTask<String, String, JSONObject> {
+
+    private class GetStationName extends AsyncTask<String, String, JSONObject> {
 
         /**
          * Before starting background thread Show Progress Dialog
@@ -415,14 +382,149 @@ public class DrawRoute extends FragmentActivity {
             JSONObject jobj = null;
             try {
 
-                ServiceHandler sh = new ServiceHandler();
+//                ServiceHandler sh = new ServiceHandler();
 
                 // Making a request to url and getting response
-               String jsonStr = sh.makeServiceCall(url, ServiceHandler.GET);
+//               String jsonStr = sh.makeServiceCall(url, ServiceHandler.GET);
+                String jsonStr = downloadUrl(url);
+
 
                 Log.d("Response: ", "> " + jsonStr);
+                JSONParser jj = new JSONParser();
 
-            jobj = new JSONObject(jsonStr);
+                jobj = (JSONObject) jj.parse(jsonStr);
+
+
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return jobj;
+        }
+
+
+        protected void onPostExecute(JSONObject user) {
+            if(end!=null && start!=null && markerPoints.size()==1)
+            {
+                end.setText(null);
+                start.setText(null);
+            }
+
+
+            JSONObject jsonObject1=null;
+            if(user!=null)
+            {
+
+
+                JSONArray jarray = (JSONArray)user.get("results");
+                String status =(String) user.get("status");
+                Log.e("Mainaaaaaa", jarray + "" + status);
+
+                JSONObject jsonObject = (JSONObject)jarray.get(0);
+                JSONArray jarray1 = (JSONArray)jsonObject.get("address_components");
+                Log.e("Arrayaaaaa",jarray1+"");
+
+                for(int j=0;j<jarray1.size();j++)
+                {
+                    jsonObject1 = (JSONObject)jarray1.get(j);
+                    JSONArray jtype = (JSONArray) jsonObject1.get("types");
+                    if(jtype.contains("political")&&(jtype.contains("locality")))
+                    {
+
+                        String country_name = jsonObject1.get("long_name")+"";
+
+                        if(markerPoints.size() > 1) {
+                            end.setText(country_name);
+                            getCodeOfTrainUrl = "http://api.railwayapi.com/name_to_code/station/"+country_name+"/apikey/kzgcg4679/";
+                            new GetTrainCodeName().execute();
+//                            new  GetTrainName().execute();
+
+                        }
+                        else
+                        {
+
+                            getCodeOfTrainUrl = "http://api.railwayapi.com/name_to_code/station/"+country_name+"/apikey/kzgcg4679/";
+                            new GetTrainCodeName().execute();
+                            start.setText(country_name);
+                        }
+                        Log.e("Namemmmmmm", country_name + "");
+                        break;
+                    }
+                    if(jtype.contains("political")&&(jtype.contains("administrative_area_level_2")))
+                    {
+
+                        String country_name = jsonObject1.get("long_name")+"";
+                        if(markerPoints.size()>1)
+                        {
+                            end.setText(country_name);
+                            getCodeOfTrainUrl = "http://api.railwayapi.com/name_to_code/station/"+country_name+"/apikey/kzgcg4679/";
+                            new GetTrainCodeName().execute();
+//                            new  GetTrainName().execute();
+
+
+                        }
+                        else
+                        {
+                            start.setText(country_name);
+                            getCodeOfTrainUrl = "http://api.railwayapi.com/name_to_code/station/"+country_name+"/apikey/kzgcg4679/";
+                            new GetTrainCodeName().execute();
+                        }
+                        Log.e("Namemmmmmm", country_name + "");
+                    }
+
+
+                }
+
+
+
+                pdialog.dismiss();
+            }
+            else
+            {
+                Toast.makeText(getApplicationContext(), "No Data", 10).show();
+                pdialog.dismiss();
+            }
+        }
+
+    }
+
+//    for fetching train data
+    private class GetTrainName extends AsyncTask<String, String, JSONObject> {
+
+        /**
+         * Before starting background thread Show Progress Dialog
+         **/
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            pdialog = new ProgressDialog(DrawRoute.this);
+            pdialog.setMessage("Loading...");
+            pdialog.setIndeterminate(false);
+            pdialog.setCancelable(true);
+            pdialog.show();
+        }
+
+        /**
+         * Getting product details in background thread
+         * @return
+         * */
+        protected JSONObject doInBackground(String... params) {
+
+            JSONObject jobj = null;
+            try {
+
+//                ServiceHandler sh = new ServiceHandler();
+
+                // Making a request to url and getting response
+//               String jsonStr = sh.makeServiceCall(url, ServiceHandler.GET);
+                String jsonStr = downloadUrl(url_trains_name);
+
+
+                Log.d("Response: ", "> " + jsonStr);
+                JSONParser jj = new JSONParser();
+
+                jobj = (JSONObject) jj.parse(jsonStr);
+//                jobj = new JSONObject(jsonStr);
 
 
 
@@ -435,24 +537,36 @@ public class DrawRoute extends FragmentActivity {
 
         protected void onPostExecute(JSONObject user) {
 
+            alnum.clear();
+            altrain.clear();
+            products.clear();
 
-            if(user!=null) {
+            JSONObject jsonObject1=null;
+            if(user!=null)
+            {
 
-//                JSONObject jobject = user.optJSONObject("results");
+                JSONArray jtrain = (JSONArray)user.get("train");
+                String response_code = user.get("response_code")+"";
+                Log.e("tttttttttttttt", jtrain + "" + response_code);
 
-                JSONArray jarray = user.optJSONArray("results");
-                Log.e("dfdasfsadfads",jarray+"");
-                JSONArray jarray1 = jarray.optJSONArray(Integer.parseInt("address_components"));
-                for(int i=0;i<jarray1.length();i++)
+                for(int j=0;j<jtrain.size();j++)
                 {
+                    jsonObject1 =(JSONObject) jtrain.get(j);
 
-                    JSONObject jsonObject = jarray.optJSONObject(i);
-                    String country_name = jsonObject.optString("long_name");
-Log.e("dfdasfsadfads",country_name);
+                    String train_name = jsonObject1.get("name")+"";
+                    String train_num = jsonObject1.get("number")+"";
+                    altrain.add(train_name);
+                    alnum.add(train_num);
+                    Log.e("sssssssssss", train_name + "" + train_num);
                 }
 
+                fillDataInListViewTrain();
+//                listview_trains.setAdapter(boxAdapter);
+                if("a"=="a")
+                {
+                    pdialog.dismiss();
+                }
 
-                pdialog.dismiss();
             }
             else
             {
@@ -460,6 +574,307 @@ Log.e("dfdasfsadfads",country_name);
                 pdialog.dismiss();
             }
         }
+
+    }
+
+    private class GetTrainCodeName extends AsyncTask<String, String, JSONObject> {
+
+        /**
+         * Before starting background thread Show Progress Dialog
+         **/
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            pdialog = new ProgressDialog(DrawRoute.this);
+            pdialog.setMessage("Loading...");
+            pdialog.setIndeterminate(false);
+            pdialog.setCancelable(true);
+            pdialog.show();
+        }
+
+        /**
+         * Getting product details in background thread
+         * @return
+         * */
+        protected JSONObject doInBackground(String... params) {
+
+            JSONObject jobj = null;
+            try {
+
+
+                String jsonStr = downloadUrl(getCodeOfTrainUrl);
+
+                Log.d("Response: ", "> " + jsonStr);
+                JSONParser jj = new JSONParser();
+
+                jobj = (JSONObject) jj.parse(jsonStr);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return jobj;
+        }
+
+
+        protected void onPostExecute(JSONObject user) {
+
+
+            JSONObject jsonObject1=null;
+            if(user!=null)
+            {
+
+                JSONArray latlngarray = (JSONArray)user.get("stations");
+                min_distance = 1000000;
+                for(int b=0; b<latlngarray.size();b++)
+                {
+
+                    JSONObject user_ = (JSONObject) latlngarray.get(b);
+                    String url_lat = user_.get("lat")+"";
+                    String url_lng = user_.get("lng")+"";
+                    if(url_lat == null || url_lng == null)
+                    {
+
+                    }
+                    else
+                    {
+                        Log.e("latlongfromjson", url_lat + "" + url_lng + "");
+                        double distance = distance((Double.parseDouble(current_lat)),(Double.parseDouble(current_lng)),
+                                (Double.parseDouble(url_lat)),(Double.parseDouble(url_lng)),"K");
+                        Log.e("distance",distance+"");
+                        if(distance < min_distance)
+                        {
+                            if(markerPoints.size() > 1)
+                            {
+                                min_distance = distance;
+                                s_end_station_code = user_.get("code")+"";
+                                Log.e("e_codeeeeeeeeeee",s_end_station_code+"");
+                            }
+                            if(markerPoints.size() == 1)
+                            {
+                                min_distance = distance;
+                                s_start_station_code = user_.get("code")+"";
+                                Log.e("s_codeeeeeeeeeee",s_start_station_code+"");
+                            }
+
+                            Log.e("valueeeeeeeeeee staions", s_start_station_code + "  "+s_end_station_code+"");
+                        }
+
+                    }
+
+                }
+
+//
+                if(!s_start_station_code.equals("") && !s_end_station_code.equals(""))
+                {
+                    new GetTrainListBetweenStations().execute();
+                }
+
+                if(markerPoints.size() == 2)
+                {
+                    new GetTrainListBetweenStations().execute();
+                }
+
+                    pdialog.dismiss();
+
+
+            }
+            else
+            {
+                Toast.makeText(getApplicationContext(), "No Code For Trains", 10).show();
+                pdialog.dismiss();
+            }
+        }
+
+    }
+
+    private class GetTrainListBetweenStations extends AsyncTask<String, String,  ArrayList<String[]>> {
+
+        /**
+         * Before starting background thread Show Progress Dialog
+         **/
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+        }
+
+        /**
+         * Getting product details in background thread
+         * @return
+         * */
+        protected  ArrayList<String[]>  doInBackground(String... params) {
+            ArrayList<String[]> list1=null;
+
+            try {
+
+            list1 = getTrainBetweenStations(s_start_station_code,s_end_station_code);
+                Log.e("lisssst_with staions",list1.toString());
+
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+           return list1;
+        }
+
+
+        protected void onPostExecute(ArrayList<String[]> alListTrains) {
+            altrain.clear();
+            alnum.clear();
+
+            for(int i=0 ;i<alListTrains.size();i++)
+            {
+                altrain.add(alListTrains.get(i)[0]);
+                alnum.add(alListTrains.get(i)[1]);
+                Log.e("name of train",alListTrains.get(i)[0]);
+                Log.e("name of train",alListTrains.get(i)[1]);
+            }
+            fillDataInListViewTrain();
+//            listview_trains.setAdapter(boxAdapter);
+
+        }
+
+    }
+
+
+//    method to getting trains between stations
+//    pass station code and it will return list
+    public static ArrayList<String[]> getTrainBetweenStations( String stn_from,String stn_to ){
+
+         final HttpClient Client = new DefaultHttpClient();
+         String Content;
+//      String stn_from="UMB";
+//      String stn_to="NDLS";
+        // String to be scanned to find the pattern.
+        ArrayList<String[]> traindata = new ArrayList<>();
+        try{
+
+                // Call long running operations here (perform background computation)
+                // NOTE: Don't call UI Element here.
+            String url = "http://erail.in/rail/getTrains.aspx?Station_From="+stn_from+"&Station_To="+stn_to+"&DataSource=0&Language=0";
+                // Server url call by GET method
+                HttpGet httpget = new HttpGet(url);
+                ResponseHandler<String> responseHandler = new BasicResponseHandler();
+                Content = Client.execute(httpget, responseHandler);
+
+
+
+
+//            Log.e("functiond",url.toString());
+//            URLConnection urlcon= url.openConnection();
+//            InputStream stream=urlcon.getInputStream();
+//            BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
+            String result=Content;
+Log.e("contentttttttttttt",result+"");
+//            result = new DrawRoute().downloadUrl(url);
+//            String i;
+////            while((i=buf.readLine())!=null){
+////                result+=i;
+//
+//            }
+            // Create a Pattern object
+            Pattern Pat_train_items = Pattern.compile("\\^\\d+\\~[A-Za-z0-9 ]+");
+            Pattern Pat_train_name = Pattern.compile("~[A-Za-z0-9 ]+");
+            Pattern Pat_train_num = Pattern.compile("\\^\\d+");
+
+            // Now create matcher object.
+
+            Matcher m1 = Pat_train_items.matcher(result);
+            while(m1.find()){
+//    	  System.out.println(m1.group(0));
+                Matcher m2 = Pat_train_name.matcher(m1.group(0));
+                Matcher m3 = Pat_train_num.matcher(m1.group(0));
+                String[] data = new String[2];
+                if(m2.find())
+                    data[0]=m2.group(0).substring(1);
+                if(m3.find())
+                    data[1]=m3.group(0).substring(1);
+                traindata.add(data);
+
+            }
+
+
+        }catch(Exception e){
+            e.printStackTrace();
+            Log.e("e.print",e+"");
+
+
+        }
+        return traindata;
+    }
+
+
+    private static double distance(double lat1, double lon1, double lat2, double lon2, String unit) {
+        double theta = lon1 - lon2;
+        double dist = Math.sin(deg2rad(lat1)) * Math.sin(deg2rad(lat2)) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.cos(deg2rad(theta));
+        dist = Math.acos(dist);
+        dist = rad2deg(dist);
+        dist = dist * 60 * 1.1515;
+        if (unit == "K") {
+            dist = dist * 1.609344;
+        } else if (unit == "N") {
+            dist = dist * 0.8684;
+        }
+
+        return (dist);
+    }
+    /*:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::*/
+	/*::	This function converts decimal degrees to radians						 :*/
+	/*:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::*/
+    private static double deg2rad(double deg) {
+        return (deg * Math.PI / 180.0);
+    }
+
+    /*:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::*/
+	/*::	This function converts radians to decimal degrees						 :*/
+	/*:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::*/
+    private static double rad2deg(double rad) {
+        return (rad * 180 / Math.PI);
+    }
+
+
+    private void setIconsLipsm() {
+        // TODO Auto-generated method stub
+
+
+        ll.removeAllViews();
+
+        for (int i=0; i<alnum.size(); i++)
+        {
+            LayoutInflater inflater = getLayoutInflater();
+            View vi = inflater.inflate(R.layout.listview_row, null);
+
+            TextView tagfrnd = (TextView) vi.findViewById(R.id.train_name);
+            TextView tagfrnd1 = (TextView) vi.findViewById(R.id.startingStation);
+            tagfrnd.setText(altrain.get(i));
+            tagfrnd1.setText(alnum.get(i));
+
+            tagfrnd.setTag(i);
+            tagfrnd.setOnClickListener(new View.OnClickListener() {
+
+                @Override
+                public void onClick(View view) {
+                    // TODO Auto-generated method stub
+                    int pos_m = Integer.valueOf(view.getTag().toString());
+                    // for zooming factor
+
+
+
+                    Intent i = new Intent(DrawRoute.this,StationListClass.class);
+                    i.putExtra("name",alnum.get(pos_m));
+                    i.putExtra("start_code",s_start_station_code);
+                    i.putExtra("end_code",s_end_station_code);
+                    startActivity(i);
+
+
+                }
+            });
+            ll.addView(vi);
+
+
+        }
+
 
     }
 
