@@ -3,20 +3,19 @@ package com.railRoute.railroute;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
-import android.location.Address;
-import android.location.Geocoder;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.GoogleMap.OnMapClickListener;
 import com.google.android.gms.maps.GoogleMapOptions;
@@ -24,9 +23,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.railRoute.unique.Product;
 import com.texplore.railroute.R;
-import com.railRoute.unique.ListAdapter;
 
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.ResponseHandler;
@@ -44,36 +41,34 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DrawRoute extends FragmentActivity {
     GoogleMap map;
     ArrayList markerPoints;
+    EditText trainNoEditText;
     GoogleMapOptions options = new GoogleMapOptions();
     TextView start,end;
-    static ArrayList<Product> products = new ArrayList<Product>();
-    ListAdapter boxAdapter;
-    ListView listview_trains;
-    ProgressDialog pdialog;
+    ProgressDialog pdailog1,pdailog2,pdailog3;
     private String url,current_lat,current_lng,s_end_station_code="",s_start_station_code="",getCodeOfTrainUrl;
-    LinearLayout heading;
+    LinearLayout heading,infilaterLayout;
     double min_distance = 1000000;
     ArrayList<String> altrain = new ArrayList<>();
     ArrayList<String> alnum = new ArrayList<>();
-    private String API_KEY = "kzgcg4679";
+    static String API_KEY = "poqnt4100";
+//            "kzgcg4679"; alternate api key
     private String url_trains_name =  "http://api.railwayapi.com/between/source/klk/dest/anvt/apikey/"+API_KEY;;
     Context context;
     ScrollView scroll;
-    LinearLayout ll;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getID();
-//        listviewClick();
+
 
 
 // Initializing
@@ -89,6 +84,8 @@ public class DrawRoute extends FragmentActivity {
 
 // Enable MyLocation Button in the Map
             map.setMyLocationEnabled(true);
+            LatLng ll = new LatLng(28.635308,77.22496);
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(ll, 3));
             options.compassEnabled(true)
                     .scrollGesturesEnabled(true)
                     .rotateGesturesEnabled(true)
@@ -99,6 +96,8 @@ public class DrawRoute extends FragmentActivity {
 
                 @Override
                 public void onMapClick(LatLng point) {
+
+
                     Log.e("latlondddddd",point.latitude+"");
                      current_lat = point.latitude+"";
                      current_lng = point.longitude+"";
@@ -109,6 +108,7 @@ public class DrawRoute extends FragmentActivity {
                     if (markerPoints.size() > 1) {
                         markerPoints.clear();
                         map.clear();
+                        infilaterLayout.removeAllViews();
                     }
                     // Adding new item to the ArrayList
                     markerPoints.add(point);
@@ -136,25 +136,13 @@ public class DrawRoute extends FragmentActivity {
                     if (markerPoints.size() >= 2) {
                         LatLng origin = (LatLng) markerPoints.get(0);
                         LatLng dest = (LatLng) markerPoints.get(1);
-//                        LatLng dest2 =new LatLng(30.8330,76.9330);
-
 // Getting URL to the Google Directions API
                         String url = getDirectionsUrl(origin, dest);
-//                        String url1 =getDirectionsUrl(dest,dest2);
-
                         DownloadTask downloadTask = new DownloadTask();
 
 // Start downloading json data from Google Directions API
                         downloadTask.execute(url);
-//                        downloadTask.getStatus()!= AsyncTask.Status.FINISHED);
-//
-////                        {
-//                            Log.e("check status","gfgh");
-//                            downloadTask.execute(url1);
-////                        }
-//
-                    }
-
+                         }
                 }
             });
         }
@@ -166,11 +154,10 @@ public class DrawRoute extends FragmentActivity {
     {
         start               = (TextView) findViewById(R.id.startpoint);
         end                 = (TextView) findViewById(R.id.destination);
-//        listview_trains     = (ListView) findViewById(R.id.listview_trains);
         heading             = (LinearLayout) findViewById(R.id.heading);
-        boxAdapter          = new ListAdapter(this, products);
         scroll              = (ScrollView)findViewById(R.id.scrollview);
-        ll                  = (LinearLayout)findViewById(R.id.linearLay);
+        infilaterLayout     = (LinearLayout)findViewById(R.id.linearLay);
+        trainNoEditText     = (EditText) findViewById(R.id.edittext);
     }
 
 
@@ -179,29 +166,19 @@ public class DrawRoute extends FragmentActivity {
     public void fillDataInListViewTrain()
     {
         heading.setVisibility(View.VISIBLE);
-//        for(int i = 0; i<alnum.size() ; i++)
-//        {
-//            products.add(new Product(altrain.get(i),alnum.get(i)));
-//        }
-        setIconsLipsm();
+        setDataInScroll();
 
     }
 
+//    on click of button to get source and destination route
+    public void getSourceDesButton (View v)
+    {
+        Intent i = new Intent(this,StationListClass.class);
+        i.putExtra("train_no_for_src_des", trainNoEditText.getText()+"");
+        startActivity(i);
+        trainNoEditText.setText(null);
 
-//    on click of train name from list
-//    public void listviewClick()
-//    {
-//        listview_trains.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-//            @Override
-//            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-//            Intent i = new Intent(DrawRoute.this,StationListClass.class);
-//                i.putExtra("name",alnum.get(position));
-//                i.putExtra("start_code",s_start_station_code);
-//                i.putExtra("end_code",s_end_station_code);
-//                startActivity(i);
-//            }
-//        });
-//    }
+    }
 
 
     private String getDirectionsUrl(LatLng origin,LatLng dest){
@@ -258,7 +235,7 @@ public class DrawRoute extends FragmentActivity {
             br.close();
 
         }catch(Exception e){
-            Log.d("Exception while downloading url", e.toString());
+            Log.d("Exception where url", e.toString());
         }finally{
             iStream.close();
             urlConnection.disconnect();
@@ -291,66 +268,11 @@ public class DrawRoute extends FragmentActivity {
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
 
-            ParserTask parserTask = new ParserTask(context,result,map);
-
-// Invokes the thread for parsing the JSON data
-            parserTask.execute(result);
-
+          new ParserTask(context,result,map).execute(result);
         }
     }
 
-    /** A class to parse the Google Places in JSON format */
-
-
-    private class ReverseGeocodingTask extends AsyncTask<LatLng, Void, String>{
-        Context mContext;
-
-        public ReverseGeocodingTask(Context context){
-            super();
-            mContext = context;
-        }
-
-        // Finding address using reverse geocoding
-        @Override
-        protected String doInBackground(LatLng... params) {
-            Geocoder geocoder = new Geocoder(mContext);
-            double latitude = params[0].latitude;
-            double longitude = params[0].longitude;
-
-            List<Address> addresses = null;
-            String addressText="";
-
-            try {
-                addresses = geocoder.getFromLocation(latitude, longitude, 1);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            if(addresses != null && addresses.size() > 0 ){
-                Address address = addresses.get(0);
-
-                addressText = String.format("%s, %s, %s",
-                        address.getMaxAddressLineIndex() > 0 ? address.getAddressLine(0) : "",
-                        address.getLocality(),
-                        address.getCountryName());
-            }
-
-            return addressText;
-        }
-
-        @Override
-        protected void onPostExecute(String addressText) {
-            // Setting the title for the marker.
-            // This will be displayed on taping the marker
-//            markerOptions.title(addressText);
-            start.setText(addressText);
-
-            // Placing a marker on the touched position
-//            googleMap.addMarker(markerOptions);
-
-        }
-    }
-
+//   async class to fetch train names
 
     private class GetStationName extends AsyncTask<String, String, JSONObject> {
 
@@ -360,11 +282,11 @@ public class DrawRoute extends FragmentActivity {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            pdialog = new ProgressDialog(DrawRoute.this);
-            pdialog.setMessage("Loading...");
-            pdialog.setIndeterminate(false);
-            pdialog.setCancelable(true);
-            pdialog.show();
+            pdailog1 = new ProgressDialog(DrawRoute.this);
+            pdailog1.setMessage("Loading...");
+            pdailog1.setIndeterminate(false);
+            pdailog1.setCancelable(true);
+            pdailog1.show();
         }
 
         /**
@@ -378,19 +300,10 @@ public class DrawRoute extends FragmentActivity {
             JSONObject jobj = null;
             try {
 
-//                ServiceHandler sh = new ServiceHandler();
-
-                // Making a request to url and getting response
-//               String jsonStr = sh.makeServiceCall(url, ServiceHandler.GET);
                 String jsonStr = downloadUrl(url);
-
-
                 Log.d("Response: ", "> " + jsonStr);
                 JSONParser jj = new JSONParser();
-
                 jobj = (JSONObject) jj.parse(jsonStr);
-
-
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -406,40 +319,33 @@ public class DrawRoute extends FragmentActivity {
                 start.setText(null);
             }
 
-
             JSONObject jsonObject1=null;
             if(user!=null)
             {
-
-
                 JSONArray jarray = (JSONArray)user.get("results");
                 String status =(String) user.get("status");
                 Log.e("Mainaaaaaa", jarray + "" + status);
-
                 JSONObject jsonObject = (JSONObject)jarray.get(0);
                 JSONArray jarray1 = (JSONArray)jsonObject.get("address_components");
-                Log.e("Arrayaaaaa",jarray1+"");
-
+                Log.e("Arrayaaaaa", jarray1 + "");
                 for(int j=0;j<jarray1.size();j++)
                 {
                     jsonObject1 = (JSONObject)jarray1.get(j);
                     JSONArray jtype = (JSONArray) jsonObject1.get("types");
                     if(jtype.contains("political")&&(jtype.contains("locality")))
                     {
-
                         String country_name = jsonObject1.get("long_name")+"";
-
                         if(markerPoints.size() > 1) {
                             end.setText(country_name);
-                            getCodeOfTrainUrl = "http://api.railwayapi.com/name_to_code/station/"+country_name+"/apikey/kzgcg4679/";
+                            getCodeOfTrainUrl = "http://api.railwayapi.com/name_to_code/station/"+country_name+"/apikey/"+API_KEY+"/";
+                            pdailog1.dismiss();
                             new GetTrainCodeName().execute();
 //                            new  GetTrainName().execute();
-
                         }
                         else
                         {
-
-                            getCodeOfTrainUrl = "http://api.railwayapi.com/name_to_code/station/"+country_name+"/apikey/kzgcg4679/";
+                            getCodeOfTrainUrl = "http://api.railwayapi.com/name_to_code/station/"+country_name+"/apikey/"+API_KEY+"/";
+                            pdailog1.dismiss();
                             new GetTrainCodeName().execute();
                             start.setText(country_name);
                         }
@@ -453,32 +359,28 @@ public class DrawRoute extends FragmentActivity {
                         if(markerPoints.size()>1)
                         {
                             end.setText(country_name);
-                            getCodeOfTrainUrl = "http://api.railwayapi.com/name_to_code/station/"+country_name+"/apikey/kzgcg4679/";
+                            pdailog1.dismiss();
+                            getCodeOfTrainUrl = "http://api.railwayapi.com/name_to_code/station/"+country_name+"/apikey/"+API_KEY+"/";
                             new GetTrainCodeName().execute();
 //                            new  GetTrainName().execute();
-
-
                         }
                         else
                         {
                             start.setText(country_name);
-                            getCodeOfTrainUrl = "http://api.railwayapi.com/name_to_code/station/"+country_name+"/apikey/kzgcg4679/";
+                            pdailog1.dismiss();
+                            getCodeOfTrainUrl = "http://api.railwayapi.com/name_to_code/station/"+country_name+"/apikey/"+API_KEY+"/";
                             new GetTrainCodeName().execute();
                         }
                         Log.e("Namemmmmmm", country_name + "");
                     }
 
-
                 }
 
-
-
-                pdialog.dismiss();
             }
             else
             {
-                Toast.makeText(getApplicationContext(), "No Data", 10).show();
-                pdialog.dismiss();
+                Toast.makeText(getApplicationContext(), "No Data", Toast.LENGTH_LONG).show();
+                pdailog1.dismiss();
             }
         }
 
@@ -493,11 +395,11 @@ public class DrawRoute extends FragmentActivity {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            pdialog = new ProgressDialog(DrawRoute.this);
-            pdialog.setMessage("Loading...");
-            pdialog.setIndeterminate(false);
-            pdialog.setCancelable(true);
-            pdialog.show();
+            pdailog2 = new ProgressDialog(DrawRoute.this);
+            pdailog2.setMessage("Loading...");
+            pdailog2.setIndeterminate(false);
+            pdailog2.setCancelable(true);
+            pdailog2.show();
         }
 
         /**
@@ -507,23 +409,12 @@ public class DrawRoute extends FragmentActivity {
         protected JSONObject doInBackground(String... params) {
 
             JSONObject jobj = null;
-            try {
-
-//                ServiceHandler sh = new ServiceHandler();
-
-                // Making a request to url and getting response
-//               String jsonStr = sh.makeServiceCall(url, ServiceHandler.GET);
+            try
+            {
                 String jsonStr = downloadUrl(url_trains_name);
-
-
                 Log.d("Response: ", "> " + jsonStr);
                 JSONParser jj = new JSONParser();
-
                 jobj = (JSONObject) jj.parse(jsonStr);
-//                jobj = new JSONObject(jsonStr);
-
-
-
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -535,7 +426,7 @@ public class DrawRoute extends FragmentActivity {
 
             alnum.clear();
             altrain.clear();
-            products.clear();
+            infilaterLayout.removeAllViews();
 
             JSONObject jsonObject1=null;
             if(user!=null)
@@ -557,17 +448,17 @@ public class DrawRoute extends FragmentActivity {
                 }
 
                 fillDataInListViewTrain();
-//                listview_trains.setAdapter(boxAdapter);
-                if("a"=="a")
+                String s = "s";
+                if(s.equals("s"))
                 {
-                    pdialog.dismiss();
+                    pdailog2.dismiss();
                 }
 
             }
             else
             {
-                Toast.makeText(getApplicationContext(), "No Data", 10).show();
-                pdialog.dismiss();
+                Toast.makeText(getApplicationContext(), "No Data", Toast.LENGTH_LONG).show();
+                pdailog2.dismiss();
             }
         }
 
@@ -581,11 +472,11 @@ public class DrawRoute extends FragmentActivity {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            pdialog = new ProgressDialog(DrawRoute.this);
-            pdialog.setMessage("Loading...");
-            pdialog.setIndeterminate(false);
-            pdialog.setCancelable(true);
-            pdialog.show();
+            pdailog3 = new ProgressDialog(DrawRoute.this);
+            pdailog3.setMessage("Loading...");
+            pdailog3.setIndeterminate(false);
+            pdailog3.setCancelable(true);
+            pdailog3.show();
         }
 
         /**
@@ -627,7 +518,7 @@ public class DrawRoute extends FragmentActivity {
                     JSONObject user_ = (JSONObject) latlngarray.get(b);
                     String url_lat = user_.get("lat")+"";
                     String url_lng = user_.get("lng")+"";
-                    if(url_lat == null || url_lng == null)
+                    if(url_lat == null || url_lng == null || url_lat == "" || url_lng == "")
                     {
 
                     }
@@ -654,30 +545,25 @@ public class DrawRoute extends FragmentActivity {
 
                             Log.e("valueeeeeeeeeee staions", s_start_station_code + "  "+s_end_station_code+"");
                         }
-
                     }
-
                 }
-
-//
-                if(!s_start_station_code.equals("") && !s_end_station_code.equals(""))
+                pdailog3.dismiss();
+                if(!s_start_station_code.equals("") && !s_end_station_code.equals("") && markerPoints.size()>1)
                 {
                     new GetTrainListBetweenStations().execute();
                 }
 
-                if(markerPoints.size() == 2)
-                {
-                    new GetTrainListBetweenStations().execute();
-                }
-
-                    pdialog.dismiss();
-
+//                if(markerPoints.size() == 2)
+//                {
+//                    pdialog.dismiss();
+//                    new GetTrainListBetweenStations().execute();
+//                }
 
             }
             else
             {
-                Toast.makeText(getApplicationContext(), "No Code For Trains", 10).show();
-                pdialog.dismiss();
+                Toast.makeText(getApplicationContext(), "No Code For Trains", Toast.LENGTH_LONG).show();
+                pdailog3.dismiss();
             }
         }
 
@@ -719,15 +605,21 @@ public class DrawRoute extends FragmentActivity {
             altrain.clear();
             alnum.clear();
 
-            for(int i=0 ;i<alListTrains.size();i++)
+            if(alListTrains!=null)
             {
-                altrain.add(alListTrains.get(i)[0]);
-                alnum.add(alListTrains.get(i)[1]);
-                Log.e("name of train",alListTrains.get(i)[0]);
-                Log.e("name of train",alListTrains.get(i)[1]);
+                for(int i=0 ;i<alListTrains.size();i++)
+                {
+                    altrain.add(alListTrains.get(i)[0]);
+                    alnum.add(alListTrains.get(i)[1]);
+                    Log.e("name of train",alListTrains.get(i)[0]);
+                    Log.e("name of train",alListTrains.get(i)[1]);
+                }
+                fillDataInListViewTrain();
             }
-            fillDataInListViewTrain();
-//            listview_trains.setAdapter(boxAdapter);
+            else
+            {
+                Toast.makeText(getApplicationContext(),"No Trains Between Selected Route",Toast.LENGTH_LONG).show();
+            }
 
         }
 
@@ -740,8 +632,6 @@ public class DrawRoute extends FragmentActivity {
 
          final HttpClient Client = new DefaultHttpClient();
          String Content;
-//      String stn_from="UMB";
-//      String stn_to="NDLS";
         // String to be scanned to find the pattern.
         ArrayList<String[]> traindata = new ArrayList<>();
         try{
@@ -753,22 +643,11 @@ public class DrawRoute extends FragmentActivity {
                 HttpGet httpget = new HttpGet(url);
                 ResponseHandler<String> responseHandler = new BasicResponseHandler();
                 Content = Client.execute(httpget, responseHandler);
+                String result=Content;
 
-
-
-
-//            Log.e("functiond",url.toString());
-//            URLConnection urlcon= url.openConnection();
-//            InputStream stream=urlcon.getInputStream();
-//            BufferedReader buf = new BufferedReader(new InputStreamReader(stream));
-            String result=Content;
-Log.e("contentttttttttttt",result+"");
-//            result = new DrawRoute().downloadUrl(url);
-//            String i;
-////            while((i=buf.readLine())!=null){
-////                result+=i;
+                Log.e("contentttttttttttt",result+"");
 //
-//            }
+
             // Create a Pattern object
             Pattern Pat_train_items = Pattern.compile("\\^\\d+\\~[A-Za-z0-9 ]+");
             Pattern Pat_train_name = Pattern.compile("~[A-Za-z0-9 ]+");
@@ -830,47 +709,46 @@ Log.e("contentttttttttttt",result+"");
     }
 
 
-    private void setIconsLipsm() {
+    private void setDataInScroll() {
         // TODO Auto-generated method stub
 
 
-        ll.removeAllViews();
-
-        for (int i=0; i<alnum.size(); i++)
+        infilaterLayout.removeAllViews();
+        if(altrain.size()>0)
         {
-            LayoutInflater inflater = getLayoutInflater();
-            View vi = inflater.inflate(R.layout.listview_row, null);
+            for (int i=0; i<alnum.size(); i++)
+            {
+                LayoutInflater inflater = getLayoutInflater();
+                View vi = inflater.inflate(R.layout.listview_row, null);
 
-            TextView tagfrnd = (TextView) vi.findViewById(R.id.train_name);
-            TextView tagfrnd1 = (TextView) vi.findViewById(R.id.startingStation);
-            tagfrnd.setText(altrain.get(i));
-            tagfrnd1.setText(alnum.get(i));
+                TextView tagfrnd = (TextView) vi.findViewById(R.id.train_name);
+                TextView tagfrnd1 = (TextView) vi.findViewById(R.id.startingStation);
+                tagfrnd.setText(altrain.get(i));
+                tagfrnd1.setText(alnum.get(i));
 
-            tagfrnd.setTag(i);
-            tagfrnd.setOnClickListener(new View.OnClickListener() {
+                tagfrnd.setTag(i);
+                tagfrnd.setOnClickListener(new View.OnClickListener() {
 
-                @Override
-                public void onClick(View view) {
-                    // TODO Auto-generated method stub
-                    int pos_m = Integer.valueOf(view.getTag().toString());
-                    // for zooming factor
+                    @Override
+                    public void onClick(View view) {
+                        // TODO Auto-generated method stub
+                        int pos_m = Integer.valueOf(view.getTag().toString());
+                        Intent i = new Intent(DrawRoute.this,StationListClass.class);
+                        i.putExtra("name",alnum.get(pos_m));
+                        i.putExtra("start_code",s_start_station_code);
+                        i.putExtra("end_code",s_end_station_code);
+                        startActivity(i);
 
+                    }
+                });
+                infilaterLayout.addView(vi);
 
-
-                    Intent i = new Intent(DrawRoute.this,StationListClass.class);
-                    i.putExtra("name",alnum.get(pos_m));
-                    i.putExtra("start_code",s_start_station_code);
-                    i.putExtra("end_code",s_end_station_code);
-                    startActivity(i);
-
-
-                }
-            });
-            ll.addView(vi);
-
-
+            }
         }
-
+        else
+        {
+            Toast.makeText(getApplicationContext(),"No Trains Between Selected Route",Toast.LENGTH_LONG).show();
+        }
 
     }
 
