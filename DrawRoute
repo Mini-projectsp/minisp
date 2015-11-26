@@ -23,7 +23,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.texplore.railroute.R;
+import com.railroute.R;
 
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.ResponseHandler;
@@ -69,8 +69,6 @@ public class DrawRoute extends FragmentActivity {
         setContentView(R.layout.activity_main);
         getID();
 
-
-
 // Initializing
         markerPoints = new ArrayList();
 
@@ -96,8 +94,6 @@ public class DrawRoute extends FragmentActivity {
 
                 @Override
                 public void onMapClick(LatLng point) {
-
-
                     Log.e("latlondddddd",point.latitude+"");
                      current_lat = point.latitude+"";
                      current_lng = point.longitude+"";
@@ -121,7 +117,7 @@ public class DrawRoute extends FragmentActivity {
 
 /**
  * For the start location, the color of marker is GREEN and
- * for the end location, the color of marker is RED.
+ * For the end location, the color of marker is RED.
  */
                     if (markerPoints.size() == 1) {
                         options.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)).title("Start Point");
@@ -148,7 +144,7 @@ public class DrawRoute extends FragmentActivity {
         }
     }
 
-//    method for getting refernce id of all UI components
+//    Method for getting refernce id of all UI components
 
     public void getID()
     {
@@ -167,10 +163,9 @@ public class DrawRoute extends FragmentActivity {
     {
         heading.setVisibility(View.VISIBLE);
         setDataInScroll();
-
     }
 
-//    on click of button to get source and destination route
+//    On click of button to get source and destination route
     public void getSourceDesButton (View v)
     {
         Intent i = new Intent(this,StationListClass.class);
@@ -295,7 +290,6 @@ public class DrawRoute extends FragmentActivity {
          * */
         protected JSONObject doInBackground(String... params) {
 
-
             Log.d("Single user Details", url);
             JSONObject jobj = null;
             try {
@@ -310,7 +304,6 @@ public class DrawRoute extends FragmentActivity {
             }
             return jobj;
         }
-
 
         protected void onPostExecute(JSONObject user) {
             if(end!=null && start!=null && markerPoints.size()==1)
@@ -383,10 +376,9 @@ public class DrawRoute extends FragmentActivity {
                 pdailog1.dismiss();
             }
         }
-
     }
 
-//    for fetching train data
+//    For fetching train data
     private class GetTrainName extends AsyncTask<String, String, JSONObject> {
 
         /**
@@ -407,8 +399,7 @@ public class DrawRoute extends FragmentActivity {
          * @return
          * */
         protected JSONObject doInBackground(String... params) {
-
-            JSONObject jobj = null;
+           JSONObject jobj = null;
             try
             {
                 String jsonStr = downloadUrl(url_trains_name);
@@ -420,10 +411,7 @@ public class DrawRoute extends FragmentActivity {
             }
             return jobj;
         }
-
-
         protected void onPostExecute(JSONObject user) {
-
             alnum.clear();
             altrain.clear();
             infilaterLayout.removeAllViews();
@@ -431,15 +419,12 @@ public class DrawRoute extends FragmentActivity {
             JSONObject jsonObject1=null;
             if(user!=null)
             {
-
                 JSONArray jtrain = (JSONArray)user.get("train");
                 String response_code = user.get("response_code")+"";
                 Log.e("tttttttttttttt", jtrain + "" + response_code);
-
                 for(int j=0;j<jtrain.size();j++)
                 {
                     jsonObject1 =(JSONObject) jtrain.get(j);
-
                     String train_name = jsonObject1.get("name")+"";
                     String train_num = jsonObject1.get("number")+"";
                     altrain.add(train_name);
@@ -453,7 +438,6 @@ public class DrawRoute extends FragmentActivity {
                 {
                     pdailog2.dismiss();
                 }
-
             }
             else
             {
@@ -461,9 +445,7 @@ public class DrawRoute extends FragmentActivity {
                 pdailog2.dismiss();
             }
         }
-
     }
-
     private class GetTrainCodeName extends AsyncTask<String, String, JSONObject> {
 
         /**
@@ -484,11 +466,8 @@ public class DrawRoute extends FragmentActivity {
          * @return
          * */
         protected JSONObject doInBackground(String... params) {
-
             JSONObject jobj = null;
             try {
-
-
                 String jsonStr = downloadUrl(getCodeOfTrainUrl);
 
                 Log.d("Response: ", "> " + jsonStr);
@@ -502,9 +481,7 @@ public class DrawRoute extends FragmentActivity {
             return jobj;
         }
 
-
         protected void onPostExecute(JSONObject user) {
-
 
             JSONObject jsonObject1=null;
             if(user!=null)
@@ -558,7 +535,6 @@ public class DrawRoute extends FragmentActivity {
 //                    pdialog.dismiss();
 //                    new GetTrainListBetweenStations().execute();
 //                }
-
             }
             else
             {
@@ -566,7 +542,6 @@ public class DrawRoute extends FragmentActivity {
                 pdailog3.dismiss();
             }
         }
-
     }
 
     private class GetTrainListBetweenStations extends AsyncTask<String, String,  ArrayList<String[]>> {
@@ -577,7 +552,6 @@ public class DrawRoute extends FragmentActivity {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-
         }
 
         /**
@@ -588,7 +562,6 @@ public class DrawRoute extends FragmentActivity {
             ArrayList<String[]> list1=null;
 
             try {
-
             list1 = getTrainBetweenStations(s_start_station_code,s_end_station_code);
                 Log.e("lisssst_with staions",list1.toString());
 
@@ -599,8 +572,7 @@ public class DrawRoute extends FragmentActivity {
             }
            return list1;
         }
-
-
+        
         protected void onPostExecute(ArrayList<String[]> alListTrains) {
             altrain.clear();
             alnum.clear();
@@ -666,20 +638,14 @@ public class DrawRoute extends FragmentActivity {
                 if(m3.find())
                     data[1]=m3.group(0).substring(1);
                 traindata.add(data);
-
             }
-
-
         }catch(Exception e){
             e.printStackTrace();
             Log.e("e.print",e+"");
 
-
         }
         return traindata;
     }
-
-
     private static double distance(double lat1, double lon1, double lat2, double lon2, String unit) {
         double theta = lon1 - lon2;
         double dist = Math.sin(deg2rad(lat1)) * Math.sin(deg2rad(lat2)) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.cos(deg2rad(theta));
@@ -708,11 +674,8 @@ public class DrawRoute extends FragmentActivity {
         return (rad * 180 / Math.PI);
     }
 
-
     private void setDataInScroll() {
         // TODO Auto-generated method stub
-
-
         infilaterLayout.removeAllViews();
         if(altrain.size()>0)
         {
@@ -720,7 +683,6 @@ public class DrawRoute extends FragmentActivity {
             {
                 LayoutInflater inflater = getLayoutInflater();
                 View vi = inflater.inflate(R.layout.listview_row, null);
-
                 TextView tagfrnd = (TextView) vi.findViewById(R.id.train_name);
                 TextView tagfrnd1 = (TextView) vi.findViewById(R.id.startingStation);
                 tagfrnd.setText(altrain.get(i));
@@ -728,7 +690,6 @@ public class DrawRoute extends FragmentActivity {
 
                 tagfrnd.setTag(i);
                 tagfrnd.setOnClickListener(new View.OnClickListener() {
-
                     @Override
                     public void onClick(View view) {
                         // TODO Auto-generated method stub
@@ -749,8 +710,6 @@ public class DrawRoute extends FragmentActivity {
         {
             Toast.makeText(getApplicationContext(),"No Trains Between Selected Route",Toast.LENGTH_LONG).show();
         }
-
     }
-
 }
 
