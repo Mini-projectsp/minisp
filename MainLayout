@@ -68,7 +68,7 @@
     android:singleLine="true"
     android:maxLength="10"
     android:inputType="number"
-    android:hint="Enter Tain Number Here:"
+    android:hint="Enter Train Number Here:"
     android:textColorHint="#5000"
     android:textColor="#000"
     android:paddingLeft="4dp"
