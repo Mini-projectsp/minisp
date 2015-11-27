@@ -43,7 +43,96 @@
             android:gravity="center"
             android:text="Enter Station By Clicking On The Map"/>
 
-     
+     <TextView
+            android:id="@+id/or"
+            android:layout_below="@+id/texta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginTop="8dp"
+            android:text="-----OR-----"/>
+
+
+        <RelativeLayout
+            android:layout_below="@+id/or"
+            android:id="@+id/edit_buton_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+
+            >
+<!--edittext for train no inpupt-->
+<EditText
+    android:id="@+id/edittext"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:singleLine="true"
+    android:maxLength="10"
+    android:inputType="number"
+    android:hint="Enter Tain Number Here:"
+    android:textColorHint="#5000"
+    android:textColor="#000"
+    android:paddingLeft="4dp"
+    />
+<!--button to get route-->
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+               android:layout_alignParentRight="true"
+                android:onClick="getSourceDesButton"
+                android:text="Get Route"/>
+
+        </RelativeLayout>
+
+        <!--input enter by map layout-->
+        <LinearLayout
+            android:id="@+id/linear_layout"
+            android:layout_below="@+id/edit_buton_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="10dp"
+            android:layout_marginBottom="4dp"
+            android:weightSum="4">
+
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="From:"
+                android:textSize="20sp"
+                android:layout_weight="0.5"
+                ></TextView>
+
+            <TextView
+                android:id="@+id/startpoint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:singleLine="true"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:layout_weight="1"
+                ></TextView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="To:"
+                android:textSize="18sp"
+                android:layout_weight="0.5"
+                ></TextView>
+
+            <TextView
+                android:id="@+id/destination"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:singleLine="true"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:layout_weight="1"
+                ></TextView>
+
+        </LinearLayout>
+
 
             <TextView
                 android:id="@+id/startpoint"
